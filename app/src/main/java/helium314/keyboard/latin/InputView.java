@@ -7,15 +7,10 @@
 package helium314.keyboard.latin;
 
 import android.content.Context;
-import android.graphics.Insets;
 import android.graphics.Rect;
-import android.os.Build;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowManager;
-import android.view.WindowMetrics;
 import android.widget.FrameLayout;
 
 import androidx.core.view.ViewKt;
@@ -24,14 +19,12 @@ import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.keyboard.MainKeyboardView;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
-import helium314.keyboard.latin.suggestions.PopupSuggestionsView;
+import helium314.keyboard.latin.suggestions.MoreSuggestionsView;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import kotlin.Unit;
 
 
 public final class InputView extends FrameLayout {
-    private static final int[] LOCATION = new int[2];
-
     private final Rect mInputViewRect = new Rect();
     private MainKeyboardView mMainKeyboardView;
     private KeyboardTopPaddingForwarder mKeyboardTopPaddingForwarder;
@@ -113,23 +106,8 @@ public final class InputView extends FrameLayout {
     private Unit onNextLayout(View v) {
         Settings.getValues().mColors.setBackground(findViewById(R.id.main_keyboard_frame), ColorType.MAIN_BACKGROUND);
 
-        if (Build.VERSION.SDK_INT >= 30) {
-            getLocationOnScreen(LOCATION);
-            WindowManager wm = getContext().getSystemService(WindowManager.class);
-            WindowMetrics windowMetrics = wm.getCurrentWindowMetrics();
-            if (LOCATION[1] + getHeight() == windowMetrics.getBounds().height()) {
-                // Edge-to-edge mode
-                WindowInsets windowInsets = windowMetrics.getWindowInsets();
-                int insetTypes = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout();
-                Insets insets = windowInsets.getInsetsIgnoringVisibility(insetTypes);
-
-                // Can't set padding on this view, since it results in an overlap with window above the keyboard.
-                mMainKeyboardView.setPadding(0, 0, 0, insets.bottom);
-                findViewById(R.id.emoji_palettes_view).setPadding(0, 0, 0, insets.bottom);
-                findViewById(R.id.clipboard_history_view).setPadding(0, 0, 0, insets.bottom);
-            }
-        }
-
+        // Work around inset application being unreliable
+        requestApplyInsets();
         return null;
     }
 
@@ -252,8 +230,8 @@ public final class InputView extends FrameLayout {
 
     /**
      * This class forwards {@link MotionEvent}s happened in the {@link MainKeyboardView} to
-     * {@link SuggestionStripView} when the {@link PopupSuggestionsView} is showing.
-     * {@link SuggestionStripView} dismisses {@link PopupSuggestionsView} when it receives any event
+     * {@link SuggestionStripView} when the {@link MoreSuggestionsView} is showing.
+     * {@link SuggestionStripView} dismisses {@link MoreSuggestionsView} when it receives any event
      * outside of it.
      */
     private static class MoreSuggestionsViewCanceler

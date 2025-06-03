@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.core.content.edit
 import helium314.keyboard.keyboard.ColorSetting
 import helium314.keyboard.keyboard.KeyboardTheme
+import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode.checkAndConvertCode
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants.Separators
@@ -17,6 +18,7 @@ import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsSubtype
 import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSubtype
+import helium314.keyboard.latin.settings.createPrefKeyForBooleanSettings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
 import helium314.keyboard.latin.utils.DictionaryInfoUtils.USER_DICTIONARY_SUFFIX
@@ -33,6 +35,7 @@ import helium314.keyboard.latin.utils.defaultPinnedToolbarPref
 import helium314.keyboard.latin.utils.getResourceSubtypes
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.mainLayoutName
+import helium314.keyboard.latin.utils.mainLayoutNameOrQwerty
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.upgradeToolbarPrefs
 import helium314.keyboard.latin.utils.writeCustomKeyCodes
@@ -43,14 +46,16 @@ import java.util.EnumMap
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        Settings.init(this)
         DebugFlags.init(this)
+        Settings.init(this)
         SubtypeSettings.init(this)
         RichInputMethodManager.init(this)
 
         checkVersionUpgrade(this)
         app = this
         Defaults.initDynamicDefaults(this)
+        LayoutUtilsCustom.removeMissingLayouts(this) // only after version upgrade
+        SupportedEmojis.load(this)
 
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         @Suppress("DEPRECATION")
@@ -82,8 +87,7 @@ fun checkVersionUpgrade(context: Context) {
     if (oldVersion == BuildConfig.VERSION_CODE)
         return
     // clear extracted dictionaries, in case updated version contains newer ones
-    DictionaryInfoUtils.getCachedDirectoryList(context)?.forEach {
-        if (!it.isDirectory) return@forEach
+    DictionaryInfoUtils.getCacheDirectories(context).forEach {
         val files = it.listFiles() ?: return@forEach
         for (file in files) {
             if (!file.name.endsWith(USER_DICTIONARY_SUFFIX))
@@ -443,19 +447,19 @@ fun checkVersionUpgrade(context: Context) {
                 val mainLayoutName = oldSplit[1]
                 // we now need more information than just locale and main layout name, get it from existing subtypes
                 val filtered = additionalSubtypes.filter {
-                    it.locale().toLanguageTag() == languageTag && (it.mainLayoutName() ?: "qwerty") == mainLayoutName
+                    it.locale().toLanguageTag() == languageTag && (it.mainLayoutNameOrQwerty()) == mainLayoutName
                 }
                 if (filtered.isNotEmpty())
                     return@joinToString filtered.first().toSettingsSubtype().toPref()
                 // find best matching resource subtype
                 val goodMatch = resourceSubtypes.filter {
-                    it.locale().toLanguageTag() == languageTag && (it.mainLayoutName() ?: "qwerty") == mainLayoutName
+                    it.locale().toLanguageTag() == languageTag && (it.mainLayoutNameOrQwerty()) == mainLayoutName
                 }
                 if (goodMatch.isNotEmpty())
                     return@joinToString goodMatch.first().toSettingsSubtype().toPref()
                 // not sure how we can get here, but better deal with it
                 val okMatch = resourceSubtypes.filter {
-                    it.locale().language == languageTag.constructLocale().language && (it.mainLayoutName() ?: "qwerty") == mainLayoutName
+                    it.locale().language == languageTag.constructLocale().language && (it.mainLayoutNameOrQwerty()) == mainLayoutName
                 }
                 if (okMatch.isNotEmpty())
                     okMatch.first().toSettingsSubtype().toPref()
@@ -558,6 +562,45 @@ fun checkVersionUpgrade(context: Context) {
             val newValue = oldValue.replace("KEY_PREVIEW", "KEY_PREVIEW_BACKGROUND")
             prefs.edit().putString(it.key, newValue).apply()
         }
+    }
+    if (oldVersion <= 3101) {
+        val e = prefs.edit()
+        prefs.all.toMap().forEach { (key, value) ->
+            if (key == "side_padding_scale") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SIDE_PADDING_SCALE_PREFIX, 0, 2), value as Float)
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SIDE_PADDING_SCALE_PREFIX, 2, 2), value)
+            } else if (key == "side_padding_scale_landscape") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SIDE_PADDING_SCALE_PREFIX, 1, 2), value as Float)
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SIDE_PADDING_SCALE_PREFIX, 3, 2), value)
+            } else if (key == "bottom_padding_scale") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_BOTTOM_PADDING_SCALE_PREFIX, 0, 1), value as Float)
+            } else if (key == "bottom_padding_scale_landscape") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_BOTTOM_PADDING_SCALE_PREFIX, 1, 1), value as Float)
+            } else if (key == "split_spacer_scale") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, 0, 1), value as Float)
+            } else if (key == "split_spacer_scale_landscape") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, 1, 1), value as Float)
+            } else if (key == "one_handed_mode_enabled_p_true") {
+                e.putBoolean(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_MODE_PREFIX, 0, 2), value as Boolean)
+            } else if (key == "one_handed_mode_enabled_p_false") {
+                e.putBoolean(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_MODE_PREFIX, 1, 2), value as Boolean)
+            } else if (key == "one_handed_mode_scale_p_true") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_SCALE_PREFIX, 0, 2), value as Float)
+            } else if (key == "one_handed_mode_scale_p_false") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_SCALE_PREFIX, 1, 2), value as Float)
+            } else if (key == "one_handed_mode_gravity_p_true") {
+                e.putInt(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_GRAVITY_PREFIX, 0, 2), value as Int)
+            } else if (key == "one_handed_mode_gravity_p_false") {
+                e.putInt(createPrefKeyForBooleanSettings(Settings.PREF_ONE_HANDED_GRAVITY_PREFIX, 1, 2), value as Int)
+            } else if (key == "keyboard_height_scale") {
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, 1, 1), value as Float)
+                e.putFloat(createPrefKeyForBooleanSettings(Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, 1, 1), value)
+            } else {
+                return@forEach
+            }
+            e.remove(key)
+        }
+        e.apply()
     }
     upgradeToolbarPrefs(prefs)
     LayoutUtilsCustom.onLayoutFileChanged() // just to be sure

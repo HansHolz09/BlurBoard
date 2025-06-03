@@ -2,6 +2,7 @@
 package helium314.keyboard.latin.utils
 
 import android.content.Context
+import android.widget.Toast
 import helium314.keyboard.keyboard.Key
 import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.KeyboardLayoutSet
@@ -10,9 +11,14 @@ import helium314.keyboard.keyboard.internal.KeyboardParams
 import helium314.keyboard.keyboard.internal.keyboard_parser.LayoutParser
 import helium314.keyboard.keyboard.internal.keyboard_parser.POPUP_KEYS_NORMAL
 import helium314.keyboard.keyboard.internal.keyboard_parser.addLocaleKeyTextsToParams
+import helium314.keyboard.latin.common.Constants.Separators
+import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue.KEYBOARD_LAYOUT_SET
 import helium314.keyboard.latin.common.decodeBase36
 import helium314.keyboard.latin.common.encodeBase36
+import helium314.keyboard.latin.define.DebugFlags
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSubtype
 import helium314.keyboard.latin.utils.LayoutType.Companion.folder
 import helium314.keyboard.latin.utils.ScriptUtils.script
 import kotlinx.serialization.SerializationException
@@ -30,11 +36,13 @@ object LayoutUtilsCustom {
         params.mPopupKeyTypes.add(POPUP_KEYS_LAYOUT)
         addLocaleKeyTextsToParams(context, params, POPUP_KEYS_NORMAL)
         try {
-            val keys = LayoutParser.parseJsonString(layoutContent).map { row -> row.mapNotNull { it.compute(params)?.toKeyParams(params) } }
-            return checkKeys(keys)
+            if (layoutContent.trimStart().startsWith("[") || layoutContent.trimStart().startsWith("//")) {
+                val keys = LayoutParser.parseJsonString(layoutContent).map { row -> row.mapNotNull { it.compute(params)?.toKeyParams(params) } }
+                return checkKeys(keys)
+            }
         } catch (e: SerializationException) {
             Log.w(TAG, "json parsing error", e)
-            if (layoutContent.trimStart().startsWith("[") && layoutContent.trimEnd().endsWith("]") && layoutContent.contains("},"))
+            if (layoutContent.trimEnd().endsWith("]") && layoutContent.contains("},"))
                 return false // we're sure enough it's a json
         } catch (e: Exception) {
             Log.w(TAG, "json layout parsed, but considered invalid", e)
@@ -124,7 +132,6 @@ object LayoutUtilsCustom {
             layoutName
         }
 
-
     /** @return layoutName for given [displayName]. If [layoutType ]is MAIN, non-null [locale] must be supplied */
     fun getLayoutName(displayName: String, layoutType: LayoutType, locale: Locale? = null): String {
         if (layoutType != LayoutType.MAIN)
@@ -143,18 +150,35 @@ object LayoutUtilsCustom {
         return file
     }
 
-    /** @return whether a layout has no file and was removed from [layouts] */
-    fun removeMissingLayouts(layouts: EnumMap<LayoutType, String>, context: Context): Boolean {
-        var removed = false
-        LayoutType.entries.forEach { type ->
-            val name = layouts[type] ?: return@forEach
-            if (!isCustomLayout(name) || getLayoutFiles(type, context).any { it.name == name })
-                return@forEach
-            // no file for custom layout
-            layouts.remove(type)
-            removed = true
+    // remove layouts without a layout file from custom subtypes and settings
+    // should not be necessary, but better fall back to default instead of crashing when encountering a bug
+    fun removeMissingLayouts(context: Context) {
+        val prefs = context.prefs()
+        fun remove(type: LayoutType, name: String) {
+            val message = "removing custom layout ${getDisplayName(name)} / $name without file"
+            if (DebugFlags.DEBUG_ENABLED)
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            Log.w(TAG, message)
+            SubtypeSettings.onRenameLayout(type, name, null, context)
         }
-        return removed
+        LayoutType.entries.forEach { type ->
+            val name = Settings.readDefaultLayoutName(type, prefs)
+            if (!isCustomLayout(name) || getLayoutFiles(type, context).any { it.name.startsWith(name) })
+                return@forEach
+            remove(type, name)
+        }
+        prefs.getString(Settings.PREF_ADDITIONAL_SUBTYPES, Defaults.PREF_ADDITIONAL_SUBTYPES)!!
+            .split(Separators.SETS).forEach outer@{
+                val subtype = it.toSettingsSubtype()
+                LayoutType.getLayoutMap(subtype.getExtraValueOf(KEYBOARD_LAYOUT_SET) ?: "").forEach { (type, name) ->
+                    if (!isCustomLayout(name) || getLayoutFiles(type, context).any { it.name.startsWith(name) })
+                        return@forEach
+                    remove(type, name)
+                    // recursive call: additional subtypes must have changed, so we repeat until nothing needs to be deleted
+                    removeMissingLayouts(context)
+                    return
+                }
+            }
     }
 
     // this goes into prefs and file names, so do not change!

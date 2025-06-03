@@ -26,6 +26,7 @@ public class DictionaryFacilitatorLruCache {
     private final Object mLock = new Object();
     private final DictionaryFacilitator mDictionaryFacilitator;
     private boolean mUseContactsDictionary;
+    private boolean mUseAppsDictionary;
     private Locale mLocale;
 
     public DictionaryFacilitatorLruCache(final Context context, final String dictionaryNamePrefix) {
@@ -58,10 +59,8 @@ public class DictionaryFacilitatorLruCache {
         // Nothing to do if the locale is null.  This would be the case before any get() calls.
         if (mLocale != null) {
           // Note: Given that personalized dictionaries are not used here; we can pass null account.
-          mDictionaryFacilitator.resetDictionaries(mContext, mLocale,
-              mUseContactsDictionary, false /* usePersonalizedDicts */,
-              false /* forceReloadMainDictionary */, null /* account */,
-              mDictionaryNamePrefix, null /* listener */);
+          mDictionaryFacilitator.resetDictionaries(mContext, mLocale, mUseContactsDictionary,
+                  mUseAppsDictionary, false, false, mDictionaryNamePrefix, null);
         }
     }
 
@@ -72,6 +71,18 @@ public class DictionaryFacilitatorLruCache {
                 return;
             }
             mUseContactsDictionary = useContactsDictionary;
+            resetDictionariesForLocaleLocked();
+            waitForLoadingMainDictionary(mDictionaryFacilitator);
+        }
+    }
+
+    public void setUseAppsDictionary(final boolean useAppsDictionary) {
+        synchronized (mLock) {
+            if (mUseAppsDictionary == useAppsDictionary) {
+                // The value has not been changed.
+                return;
+            }
+            mUseAppsDictionary = useAppsDictionary;
             resetDictionariesForLocaleLocked();
             waitForLoadingMainDictionary(mDictionaryFacilitator);
         }

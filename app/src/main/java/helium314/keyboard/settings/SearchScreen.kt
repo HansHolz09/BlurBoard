@@ -6,14 +6,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -64,10 +63,11 @@ fun SearchSettingsScreen(
         content = {
             if (content != null) content()
             else {
-                Scaffold(contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.ime)) { innerPadding ->
+                Scaffold(
+                    contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                ) { innerPadding ->
                     Column(
-                        Modifier.verticalScroll(rememberScrollState())
-                            .then(Modifier.padding(bottom = innerPadding.calculateBottomPadding()))
+                        Modifier.verticalScroll(rememberScrollState()).then(Modifier.padding(innerPadding))
                     ) {
                         settings.forEach {
                             if (it is Int) {
@@ -122,94 +122,89 @@ fun <T: Any?> SearchScreen(
     // keyboard in unexpected situations such as going back from another screen, which is rather annoying
     var searchText by remember { mutableStateOf(TextFieldValue()) }
     var showSearch by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize()) {
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
+    { innerPadding ->
+        Column(Modifier.fillMaxSize().padding(innerPadding)) {
 
-        fun setShowSearch(value: Boolean) {
-            showSearch = value
-            if (!value) searchText = TextFieldValue()
-        }
-        BackHandler {
-            if (showSearch || searchText.text.isNotEmpty()) setShowSearch(false)
-            else onClickBack()
-        }
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainer,
-        ) {
-            Column {
-                TopAppBar(
-                    title = title,
-                    windowInsets = TopAppBarDefaults.windowInsets,
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            if (showSearch) setShowSearch(false)
-                            else onClickBack()
-                        }) {
-                            Icon(
-                                painterResource(R.drawable.ic_arrow_back),
-                                stringResource(R.string.spoken_description_action_previous)
-                            )
-                        }
-                    },
-                    actions = {
-                        if (icon == null)
-                            IconButton(onClick = { setShowSearch(!showSearch) }) { SearchIcon() }
-                        else
-                            icon()
-                        if (menu != null)
-                            Box {
-                                var showMenu by remember { mutableStateOf(false) }
-                                IconButton(
-                                    onClick = { showMenu = true }
-                                ) { Icon(painterResource(R.drawable.ic_arrow_left), "menu", Modifier.rotate(-90f)) }
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = { showMenu = false }
-                                ) {
-                                    menu.forEach {
-                                        DropdownMenuItem(
-                                            text = { Text(it.first) },
-                                            onClick = { showMenu = false; it.second() }
-                                        )
+            fun setShowSearch(value: Boolean) {
+                showSearch = value
+                if (!value) searchText = TextFieldValue()
+            }
+            BackHandler {
+                if (showSearch || searchText.text.isNotEmpty()) setShowSearch(false)
+                else onClickBack()
+            }
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                Column {
+                    TopAppBar(
+                        title = title,
+                        windowInsets = WindowInsets(0),
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                if (showSearch) setShowSearch(false)
+                                else onClickBack()
+                            }) {
+                                Icon(
+                                    painterResource(R.drawable.ic_arrow_back),
+                                    stringResource(R.string.spoken_description_action_previous)
+                                )
+                            }
+                        },
+                        actions = {
+                            if (icon == null)
+                                IconButton(onClick = { setShowSearch(!showSearch) }) { SearchIcon() }
+                            else
+                                icon()
+                            if (menu != null)
+                                Box {
+                                    var showMenu by remember { mutableStateOf(false) }
+                                    IconButton(
+                                        onClick = { showMenu = true }
+                                    ) { Icon(painterResource(R.drawable.ic_arrow_left), "menu", Modifier.rotate(-90f)) }
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false }
+                                    ) {
+                                        menu.forEach {
+                                            DropdownMenuItem(
+                                                text = { Text(it.first) },
+                                                onClick = { showMenu = false; it.second() }
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                    },
-                )
-                ExpandableSearchField(
-                    expanded = showSearch,
-                    onDismiss = { setShowSearch(false) },
-                    search = searchText,
-                    onSearchChange = { searchText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface
+                        },
                     )
-                )
-            }
-        }
-        CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyLarge) {
-            if (searchText.text.isBlank() && content != null) {
-                Column(
-                    // todo: how and where to best deal with insets?
-                    //  here? manifest android:windowSoftInputMode="adjustResize"?
-                    //  other?
-//                    Modifier
-//                        .windowInsetsPadding(
-//                            WindowInsets.safeDrawing.only(
-//                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
-//                            )
-//                        )
-                ) {
-                    content()
+                    ExpandableSearchField(
+                        expanded = showSearch,
+                        onDismiss = { setShowSearch(false) },
+                        search = searchText,
+                        onSearchChange = { searchText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
                 }
-            } else {
-                val items = filteredItems(searchText.text)
-                Scaffold(contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.ime)) { innerPadding ->
-                    LazyColumn(contentPadding = PaddingValues.Absolute(bottom = innerPadding.calculateBottomPadding())) {
-                        items(items) {
-                            itemContent(it)
+            }
+            CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyLarge) {
+                if (searchText.text.isBlank() && content != null) {
+                    Column {
+                        content()
+                    }
+                } else {
+                    val items = filteredItems(searchText.text)
+                    Scaffold(
+                        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                    ) { innerPadding ->
+                        LazyColumn(contentPadding = innerPadding) {
+                            items(items) {
+                                itemContent(it)
+                            }
                         }
                     }
                 }

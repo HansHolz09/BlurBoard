@@ -48,7 +48,7 @@ open class KeyboardBuilder<KP : KeyboardParams>(protected val mContext: Context,
         if (id.isEmojiKeyboard) {
             mParams.mAllowRedundantPopupKeys = true
             readAttributes(R.xml.kbd_emoji)
-            keysInRows = EmojiParser(mParams, mContext, Settings.getValues().mEmojiMaxSdk).parse()
+            keysInRows = EmojiParser(mParams, mContext).parse()
         } else {
             try {
                 setupParams()
@@ -176,7 +176,7 @@ open class KeyboardBuilder<KP : KeyboardParams>(protected val mContext: Context,
             val relativeWidthSumNew = row.sumOf { it.mWidth }
             val widthFactor = relativeWidthSum / relativeWidthSumNew
             // re-calculate absolute sizes and positions
-            var currentX = 0f
+            var currentX = mParams.mLeftPadding.toFloat()
             row.forEach {
                 it.mWidth *= widthFactor
                 it.setAbsoluteDimensions(currentX, y)

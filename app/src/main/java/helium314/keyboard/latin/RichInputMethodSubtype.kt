@@ -10,12 +10,15 @@ import android.view.inputmethod.InputMethodSubtype.InputMethodSubtypeBuilder
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue.KEYBOARD_LAYOUT_SET
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
-import helium314.keyboard.latin.common.LocaleUtils.isRtlLanguage
 import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.ScriptUtils
+import helium314.keyboard.latin.utils.ScriptUtils.script
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils
+import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.locale
+import helium314.keyboard.latin.utils.mainLayoutNameOrQwerty
 import java.util.Locale
 
 /**
@@ -25,7 +28,7 @@ class RichInputMethodSubtype private constructor(val rawSubtype: InputMethodSubt
     val locale: Locale = rawSubtype.locale()
 
     // The subtype is considered RTL if the language of the main subtype is RTL.
-    val isRtlSubtype: Boolean = isRtlLanguage(locale)
+    val isRtlSubtype: Boolean = ScriptUtils.isScriptRtl(locale.script())
 
     fun getExtraValueOf(key: String): String? = rawSubtype.getExtraValueOf(key)
 
@@ -40,21 +43,9 @@ class RichInputMethodSubtype private constructor(val rawSubtype: InputMethodSubt
 
     val isCustom: Boolean get() = LayoutUtilsCustom.isCustomLayout(mainLayoutName)
 
-    val fullDisplayName: String get() {
-            if (isNoLanguage) {
-                return SubtypeLocaleUtils.getMainLayoutDisplayName(rawSubtype)!!
-            }
-            return SubtypeLocaleUtils.getSubtypeLocaleDisplayName(locale)
-        }
+    val fullDisplayName: String get() = SubtypeLocaleUtils.getSubtypeLocaleDisplayName(locale)
 
-    val middleDisplayName: String
-        // Get the RichInputMethodSubtype's middle display name in its locale.
-        get() {
-            if (isNoLanguage) {
-                return SubtypeLocaleUtils.getMainLayoutDisplayName(rawSubtype)!!
-            }
-            return SubtypeLocaleUtils.getSubtypeLanguageDisplayName(locale)
-        }
+    val middleDisplayName: String get() = SubtypeLocaleUtils.getSubtypeLanguageDisplayName(locale)
 
     override fun equals(other: Any?): Boolean {
         if (other !is RichInputMethodSubtype) return false
@@ -81,7 +72,7 @@ class RichInputMethodSubtype private constructor(val rawSubtype: InputMethodSubt
                 + "," + Constants.Subtype.ExtraValue.EMOJI_CAPABLE)
         private val DUMMY_NO_LANGUAGE_SUBTYPE = RichInputMethodSubtype(
             InputMethodSubtypeBuilder()
-                .setSubtypeNameResId(R.string.subtype_no_language_qwerty)
+                .setSubtypeNameResId(R.string.subtype_no_language)
                 .setSubtypeIconResId(R.drawable.ic_ime_switcher)
                 .setSubtypeLocale(SubtypeLocaleUtils.NO_LANGUAGE)
                 .setSubtypeMode(Constants.Subtype.KEYBOARD_MODE)
@@ -115,11 +106,8 @@ class RichInputMethodSubtype private constructor(val rawSubtype: InputMethodSubt
         val noLanguageSubtype: RichInputMethodSubtype get() {
             sNoLanguageSubtype?.let { return it }
             var noLanguageSubtype = sNoLanguageSubtype
-            val rawNoLanguageSubtype = RichInputMethodManager.getInstance()
-                .findSubtypeByLocaleAndKeyboardLayoutSet(
-                    SubtypeLocaleUtils.NO_LANGUAGE.constructLocale(),
-                    SubtypeLocaleUtils.QWERTY
-                )
+            val rawNoLanguageSubtype = SubtypeSettings.getResourceSubtypesForLocale(SubtypeLocaleUtils.NO_LANGUAGE.constructLocale())
+                .firstOrNull { it.mainLayoutNameOrQwerty() == SubtypeLocaleUtils.QWERTY }
             if (rawNoLanguageSubtype != null) {
                 noLanguageSubtype = RichInputMethodSubtype(rawNoLanguageSubtype)
             }

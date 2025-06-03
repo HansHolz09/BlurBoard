@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodSubtype;
+import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -49,8 +50,8 @@ import helium314.keyboard.latin.utils.Log;
 import helium314.keyboard.latin.utils.RecapitalizeStatus;
 import helium314.keyboard.latin.utils.ResourceUtils;
 import helium314.keyboard.latin.utils.ScriptUtils;
-import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional;
+import helium314.keyboard.latin.utils.ToolbarMode;
 
 public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private static final String TAG = KeyboardSwitcher.class.getSimpleName();
@@ -64,6 +65,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private LinearLayout mClipboardStripView;
     private HorizontalScrollView mClipboardStripScrollView;
     private SuggestionStripView mSuggestionStripView;
+    private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
     private TextView mFakeToastView;
     private LatinIME mLatinIME;
@@ -157,10 +159,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         } catch (KeyboardLayoutSetException e) {
             Log.e(TAG, "loading keyboard failed: " + e.mKeyboardId, e.getCause());
             try {
-                final InputMethodSubtype qwerty = SubtypeUtilsAdditional.INSTANCE
-                        .createEmojiCapableAdditionalSubtype(mRichImm.getCurrentSubtypeLocale(), SubtypeLocaleUtils.QWERTY, true);
+                final InputMethodSubtype defaults = SubtypeUtilsAdditional.INSTANCE.createDefaultSubtype(mRichImm.getCurrentSubtypeLocale());
                 mKeyboardLayoutSet = builder.setKeyboardGeometry(keyboardWidth, keyboardHeight)
-                        .setSubtype(RichInputMethodSubtype.Companion.get(qwerty))
+                        .setSubtype(RichInputMethodSubtype.Companion.get(defaults))
                         .setVoiceInputKeyEnabled(settingsValues.mShowsVoiceInputKey)
                         .setNumberRowEnabled(settingsValues.mShowsNumberRow)
                         .setLanguageSwitchKeyEnabled(settingsValues.isLanguageSwitchKeyEnabled())
@@ -169,9 +170,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
                         .setOneHandedModeEnabled(oneHandedModeEnabled)
                         .build();
                 mState.onLoadKeyboard(currentAutoCapsState, currentRecapitalizeState, oneHandedModeEnabled);
-                showToast("error loading the keyboard, falling back to qwerty", false);
+                showToast("error loading the keyboard, falling back to defaults", false);
             } catch (KeyboardLayoutSetException e2) {
-                Log.e(TAG, "even fallback to qwerty failed: " + e2.mKeyboardId, e2.getCause());
+                Log.e(TAG, "even fallback to defaults failed: " + e2.mKeyboardId, e2.getCause());
             }
         }
     }
@@ -308,6 +309,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {
         final int visibility = isImeSuppressedByHardwareKeyboard(settingsValues, toggleState) ? View.GONE : View.VISIBLE;
+        final int stripVisibility = settingsValues.mToolbarMode == ToolbarMode.HIDDEN ? View.GONE : View.VISIBLE;
+        mStripContainer.setVisibility(stripVisibility);
         PointerTracker.switchTo(mKeyboardView);
         mKeyboardView.setVisibility(visibility);
         // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
@@ -318,7 +321,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiPalettesView.stopEmojiPalettes();
         mEmojiTabStripView.setVisibility(View.GONE);
         mClipboardStripScrollView.setVisibility(View.GONE);
-        mSuggestionStripView.setVisibility(View.VISIBLE);
+        mSuggestionStripView.setVisibility(stripVisibility);
         mClipboardHistoryView.setVisibility(View.GONE);
         mClipboardHistoryView.stopClipboardHistory();
     }
@@ -335,6 +338,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         // @see LatinIME#onComputeInset(android.inputmethodservice.InputMethodService.Insets)
         mKeyboardView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
+        mStripContainer.setVisibility(getSecondaryStripVisibility());
         mClipboardStripScrollView.setVisibility(View.GONE);
         mEmojiTabStripView.setVisibility(View.VISIBLE);
         mClipboardHistoryView.setVisibility(View.GONE);
@@ -356,6 +360,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mKeyboardView.setVisibility(View.GONE);
         mEmojiTabStripView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
+        mStripContainer.setVisibility(getSecondaryStripVisibility());
         mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
         mClipboardStripScrollView.setVisibility(View.VISIBLE);
         mEmojiPalettesView.setVisibility(View.GONE);
@@ -477,10 +482,13 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     // Implements {@link KeyboardState.SwitchActions}.
     @Override
     public void setOneHandedModeEnabled(boolean enabled) {
-        if (mKeyboardViewWrapper.getOneHandedModeEnabled() == enabled) {
+        setOneHandedModeEnabled(enabled, false);
+    }
+
+    public void setOneHandedModeEnabled(boolean enabled, boolean force) {
+        if (!force && mKeyboardViewWrapper.getOneHandedModeEnabled() == enabled) {
             return;
         }
-        mEmojiPalettesView.clearKeyboardCache();
         final Settings settings = Settings.getInstance();
         mKeyboardViewWrapper.setOneHandedModeEnabled(enabled);
         mKeyboardViewWrapper.setOneHandedGravity(settings.getCurrent().mOneHandedModeGravity);
@@ -511,6 +519,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
                 !settings.getCurrent().mIsSplitKeyboardEnabled,
                 mCurrentOrientation == Configuration.ORIENTATION_LANDSCAPE
         );
+        setOneHandedModeEnabled(settings.getCurrent().mOneHandedModeEnabled, true);
         reloadKeyboard();
     }
 
@@ -539,6 +548,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             final int toastLength = briefToast ? 2000 : 3500;
             showFakeToast(text, toastLength);
         }
+    }
+
+    private static int getSecondaryStripVisibility() {
+        return Settings.getValues().mSecondaryStripVisible? View.VISIBLE : View.GONE;
     }
 
     // Displays a toast-like message with the provided text for a specified duration.
@@ -608,6 +621,10 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         return mKeyboardView.isShowingPopupKeysPanel();
     }
 
+    public boolean isShowingStripContainer() {
+        return mStripContainer.isShown();
+    }
+
     public View getVisibleKeyboardView() {
         if (isShowingEmojiPalettes()) {
             return mEmojiPalettesView;
@@ -633,6 +650,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         return mKeyboardView;
     }
 
+    public FrameLayout getStripContainer() { return mStripContainer; }
+
     public void deallocateMemory() {
         if (mKeyboardView != null) {
             mKeyboardView.cancelAllOngoingEvents();
@@ -643,6 +662,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         }
         if (mClipboardHistoryView != null) {
             mClipboardHistoryView.stopClipboardHistory();
+        }
+    }
+
+    public void trimMemory() {
+        if (mEmojiPalettesView != null) {
+            mEmojiPalettesView.clearKeyboardCache();
         }
     }
 
@@ -680,6 +705,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mClipboardStripView = mCurrentInputView.findViewById(R.id.clipboard_strip);
         mClipboardStripScrollView = mCurrentInputView.findViewById(R.id.clipboard_strip_scroll_view);
         mSuggestionStripView = mCurrentInputView.findViewById(R.id.suggestion_strip_view);
+        mStripContainer = mCurrentInputView.findViewById(R.id.strip_container);
 
         prefs.registerOnSharedPreferenceChangeListener(mSuggestionStripView);
         prefs.registerOnSharedPreferenceChangeListener(mClipboardHistoryView);

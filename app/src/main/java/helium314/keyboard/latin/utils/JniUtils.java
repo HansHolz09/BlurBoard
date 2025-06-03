@@ -52,10 +52,18 @@ public final class JniUtils {
                         .getMethod("currentApplication").invoke(null, (Object[]) null);
             } catch (Exception ignored) { }
         }
-        if (app != null) // use the actual path if possible
+        if (app != null && app.getFilesDir() != null) // use the actual path if possible
             filesDir = app.getFilesDir().getAbsolutePath();
-        final File userSuppliedLibrary = new File(filesDir + File.separator + JNI_LIB_IMPORT_FILE_NAME);
-        if (!BuildConfig.BUILD_TYPE.equals("nouserlib") && userSuppliedLibrary.exists()) {
+
+        File userSuppliedLibrary;
+        try {
+            userSuppliedLibrary = new File(filesDir + File.separator + JNI_LIB_IMPORT_FILE_NAME);
+            if (!userSuppliedLibrary.isFile())
+                userSuppliedLibrary = null;
+        } catch (Exception e) {
+            userSuppliedLibrary = null;
+        }
+        if (!BuildConfig.BUILD_TYPE.equals("nouserlib") && userSuppliedLibrary != null) {
             String wantedChecksum = expectedDefaultChecksum();
             try {
                 if (app != null) {
@@ -90,7 +98,7 @@ public final class JniUtils {
                 System.loadLibrary(JNI_LIB_NAME_GOOGLE);
                 sHaveGestureLib = true;
             } catch (UnsatisfiedLinkError ul) {
-                Log.w(TAG, "Could not load system glide typing library " + JNI_LIB_NAME_GOOGLE, ul);
+                Log.w(TAG, "Could not load system glide typing library " + JNI_LIB_NAME_GOOGLE + ": " + ul.getMessage());
             }
         }
         if (!sHaveGestureLib) {

@@ -4,7 +4,6 @@ package helium314.keyboard.settings.screens
 import android.content.Context
 import android.os.Build
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,7 +20,6 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.checkTimestampFormat
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.getStringResourceOrName
 import helium314.keyboard.latin.utils.prefs
@@ -36,10 +34,10 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.dialogs.ColorThemePickerDialog
 import helium314.keyboard.settings.dialogs.CustomizeIconsDialog
-import helium314.keyboard.settings.dialogs.TextInputDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.BackgroundImagePref
 import helium314.keyboard.settings.preferences.CustomFontPreference
+import helium314.keyboard.settings.preferences.MultiSliderPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.previewDark
 
@@ -68,22 +66,22 @@ fun AppearanceScreen(
         SettingsWithoutKey.BACKGROUND_IMAGE_LANDSCAPE,
         R.string.settings_category_miscellaneous,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
-        if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD))
-            Settings.PREF_SPLIT_SPACER_SCALE else null,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
-        if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE))
-            Settings.PREF_SPLIT_SPACER_SCALE_LANDSCAPE else null,
+        if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
+            || prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD))
+            Settings.PREF_SPLIT_SPACER_SCALE_PREFIX else null,
         if (prefs.getBoolean(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS))
             Settings.PREF_NARROW_KEY_GAPS else null,
-        Settings.PREF_KEYBOARD_HEIGHT_SCALE,
-        Settings.PREF_BOTTOM_PADDING_SCALE,
-        Settings.PREF_BOTTOM_PADDING_SCALE_LANDSCAPE,
-        Settings.PREF_SIDE_PADDING_SCALE,
-        Settings.PREF_SIDE_PADDING_SCALE_LANDSCAPE,
+        Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX,
+        Settings.PREF_BOTTOM_PADDING_SCALE_PREFIX,
+        Settings.PREF_SIDE_PADDING_SCALE_PREFIX,
         Settings.PREF_SPACE_BAR_TEXT,
         SettingsWithoutKey.CUSTOM_FONT,
         Settings.PREF_FONT_SCALE,
         Settings.PREF_EMOJI_FONT_SCALE,
+        Settings.PREF_EMOJI_KEY_FIT,
+        if (prefs.getInt(Settings.PREF_EMOJI_MAX_SDK, Defaults.PREF_EMOJI_MAX_SDK) >= 24)
+            Settings.PREF_EMOJI_SKIN_TONE else null,
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -196,11 +194,12 @@ fun createAppearanceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_ENABLE_SPLIT_KEYBOARD, R.string.enable_split_keyboard) {
         SwitchPreference(it, Defaults.PREF_ENABLE_SPLIT_KEYBOARD) { KeyboardSwitcher.getInstance().reloadKeyboard() }
     },
-    Setting(context, Settings.PREF_SPLIT_SPACER_SCALE, R.string.split_spacer_scale) { setting ->
-        SliderPreference(
+    Setting(context, Settings.PREF_SPLIT_SPACER_SCALE_PREFIX, R.string.split_spacer_scale) { setting ->
+        MultiSliderPreference(
             name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_SPLIT_SPACER_SCALE,
+            baseKey = setting.key,
+            dimensions = listOf(stringResource(R.string.landscape)),
+            defaults = Defaults.PREF_SPLIT_SPACER_SCALE,
             range = 0.5f..2f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
@@ -208,59 +207,35 @@ fun createAppearanceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, R.string.enable_split_keyboard_landscape) {
         SwitchPreference(it, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE) { KeyboardSwitcher.getInstance().reloadKeyboard() }
     },
-    Setting(context, Settings.PREF_SPLIT_SPACER_SCALE_LANDSCAPE, R.string.split_spacer_scale_landscape) { setting ->
-        SliderPreference(
-            name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_SPLIT_SPACER_SCALE_LANDSCAPE,
-            range = 0.5f..2f,
-            description = { "${(100 * it).toInt()}%" }
-        ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
-    },
     Setting(context, Settings.PREF_NARROW_KEY_GAPS, R.string.prefs_narrow_key_gaps) {
         SwitchPreference(it, Defaults.PREF_NARROW_KEY_GAPS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
-    Setting(context, Settings.PREF_KEYBOARD_HEIGHT_SCALE, R.string.prefs_keyboard_height_scale) { setting ->
-        SliderPreference(
+    Setting(context, Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, R.string.prefs_keyboard_height_scale) { setting ->
+        MultiSliderPreference(
             name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_KEYBOARD_HEIGHT_SCALE,
-            range = 0.5f..1.5f,
+            baseKey = setting.key,
+            dimensions = listOf(stringResource(R.string.landscape)),
+            defaults = Defaults.PREF_KEYBOARD_HEIGHT_SCALE,
+            range = 0.3f..1.5f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
-    Setting(context, Settings.PREF_BOTTOM_PADDING_SCALE, R.string.prefs_bottom_padding_scale) { setting ->
-        SliderPreference(
+    Setting(context, Settings.PREF_BOTTOM_PADDING_SCALE_PREFIX, R.string.prefs_bottom_padding_scale) { setting ->
+        MultiSliderPreference(
             name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_BOTTOM_PADDING_SCALE,
+            baseKey = setting.key,
+            dimensions = listOf(stringResource(R.string.landscape)),
+            defaults = Defaults.PREF_BOTTOM_PADDING_SCALE,
             range = 0f..5f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
-    Setting(context, Settings.PREF_BOTTOM_PADDING_SCALE_LANDSCAPE, R.string.prefs_bottom_padding_scale_landscape) { setting ->
-        SliderPreference(
+    Setting(context, Settings.PREF_SIDE_PADDING_SCALE_PREFIX, R.string.prefs_side_padding_scale) { setting ->
+        MultiSliderPreference(
             name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_BOTTOM_PADDING_SCALE_LANDSCAPE,
-            range = 0f..5f,
-            description = { "${(100 * it).toInt()}%" }
-        ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
-    },
-    Setting(context, Settings.PREF_SIDE_PADDING_SCALE, R.string.prefs_side_padding_scale) { setting ->
-        SliderPreference(
-            name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_SIDE_PADDING_SCALE,
-            range = 0f..3f,
-            description = { "${(100 * it).toInt()}%" }
-        ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
-    },
-    Setting(context, Settings.PREF_SIDE_PADDING_SCALE_LANDSCAPE, R.string.prefs_side_padding_scale_landscape) { setting ->
-        SliderPreference(
-            name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_SIDE_PADDING_SCALE_LANDSCAPE,
+            baseKey = setting.key,
+            dimensions = listOf(stringResource(R.string.landscape), stringResource(R.string.split)),
+            defaults = Defaults.PREF_SIDE_PADDING_SCALE,
             range = 0f..3f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
@@ -288,6 +263,20 @@ fun createAppearanceSettings(context: Context) = listOf(
             range = 0.5f..1.5f,
             description = { "${(100 * it).toInt()}%" }
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_EMOJI_KEY_FIT, R.string.prefs_emoji_key_fit) {
+        SwitchPreference(it, Defaults.PREF_EMOJI_KEY_FIT) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_EMOJI_SKIN_TONE, R.string.prefs_emoji_skin_tone) { setting ->
+        val items = listOf(
+            stringResource(R.string.prefs_emoji_skin_tone_neutral) to "",
+            "\uD83C\uDFFB" to "\uD83C\uDFFB",
+            "\uD83C\uDFFC" to "\uD83C\uDFFC",
+            "\uD83C\uDFFD" to "\uD83C\uDFFD",
+            "\uD83C\uDFFE" to "\uD83C\uDFFE",
+            "\uD83C\uDFFF" to "\uD83C\uDFFF"
+        )
+        ListPreference(setting, items, Defaults.PREF_EMOJI_SKIN_TONE) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
 )
 
