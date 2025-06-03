@@ -9,7 +9,7 @@
         name="InputView.LXX"
         parent="InputView"
     >
-        <item name="android:elevation">8dp</item>
+        <!-- android:elevation="8dp" removed to prevent dark border/shadow -->
     </style>
     <!-- LXX KeyboardView theme -->
     <style
