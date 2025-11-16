@@ -8,6 +8,7 @@ package helium314.keyboard.keyboard;
 
 import android.view.KeyEvent;
 
+import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.InputPointers;
 
@@ -20,8 +21,11 @@ public interface KeyboardActionListener {
      *            the value will be zero.
      * @param repeatCount how many times the key was repeated. Zero if it is the first press.
      * @param isSinglePointer true if pressing has occurred while no other key is being pressed.
+     * @param hapticEvent the type of haptic feedback to perform.
      */
-    void onPressKey(int primaryCode, int repeatCount, boolean isSinglePointer);
+    void onPressKey(int primaryCode, int repeatCount, boolean isSinglePointer, HapticEvent hapticEvent);
+
+    void onLongPressKey(int primaryCode);
 
     /**
      * Called when the user releases a key. This is sent after the {@link #onCodeInput} is called.
@@ -118,10 +122,13 @@ public interface KeyboardActionListener {
     int SWIPE_MOVE_CURSOR = 1;
     int SWIPE_SWITCH_LANGUAGE = 2;
     int SWIPE_TOGGLE_NUMPAD = 3;
+    int SWIPE_HIDE_KEYBOARD = 4;
 
     class Adapter implements KeyboardActionListener {
         @Override
-        public void onPressKey(int primaryCode, int repeatCount, boolean isSinglePointer) {}
+        public void onPressKey(int primaryCode, int repeatCount, boolean isSinglePointer, HapticEvent hapticEvent) {}
+        @Override
+        public void onLongPressKey(int primaryCode) {}
         @Override
         public void onReleaseKey(int primaryCode, boolean withSliding) {}
         @Override

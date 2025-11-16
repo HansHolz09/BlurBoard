@@ -1,7 +1,9 @@
+import com.android.build.api.variant.ApplicationVariant
+
 plugins {
     id("com.android.application")
     kotlin("android")
-    kotlin("plugin.serialization") version "2.1.21"
+    kotlin("plugin.serialization") version "2.2.10"
     kotlin("plugin.compose") version "2.0.0"
 }
 
@@ -12,8 +14,8 @@ android {
         applicationId = "helium314.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 3201
-        versionName = "3.2"
+        versionCode = 3600
+        versionName = "3.6-beta1"
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
@@ -53,6 +55,15 @@ android {
             applicationIdSuffix = ".debug"
         }
         base.archivesBaseName = "HeliBoard_" + defaultConfig.versionName
+        // got a little too big for GitHub after some dependency upgrades, so we remove the largest dictionary
+        androidComponents.onVariants { variant: ApplicationVariant ->
+            if (variant.buildType == "debug") {
+                variant.androidResources.ignoreAssetsPatterns = listOf("main_ro.dict")
+                variant.proguardFiles = emptyList()
+                variant.proguardFiles.add(project.layout.buildDirectory.file(getDefaultProguardFile("proguard-android.txt").absolutePath))
+                variant.proguardFiles.add(project.layout.buildDirectory.file(project.buildFile.parent + "/proguard-rules.pro"))
+            }
+        }
     }
 
     buildFeatures {
@@ -104,21 +115,21 @@ android {
 
 dependencies {
     // androidx
-    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.core:core-ktx:1.16.0") // 1.17 requires SDK 36
     implementation("androidx.recyclerview:recyclerview:1.4.0")
-    implementation("androidx.autofill:autofill:1.1.0")
+    implementation("androidx.autofill:autofill:1.3.0")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
 
     // kotlin
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     // compose
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
-    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
+    implementation(platform("androidx.compose:compose-bom:2025.08.00"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.navigation:navigation-compose:2.9.0")
+    implementation("androidx.navigation:navigation-compose:2.9.3")
     implementation("sh.calvin.reorderable:reorderable:2.4.3") // for easier re-ordering
     implementation("com.github.skydoves:colorpicker-compose:1.1.2") // for user-defined colors
 
