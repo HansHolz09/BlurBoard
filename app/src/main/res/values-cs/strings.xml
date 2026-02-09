@@ -82,11 +82,9 @@
     <string name="show_setup_wizard_icon_summary">"Zobrazí ikonu aplikace ve spouštěči"</string>
     <string name="dictionary_category_title">"Doplňkové slovníky"</string>
     <string name="dictionary_available">"Slovník k dispozici"</string>
-    <string name="last_update">"Poslední aktualizace"</string>
     <string name="settings">"Nastavení"</string>
     <string name="delete">"Smazat"</string>
     <string name="version_text">Verze %s</string>
-    <string name="user_dict_settings_add_dialog_title">"Přidat do slovníku"</string>
     <string name="user_dict_settings_add_shortcut_option_name">"Zkratka:"</string>
     <string name="user_dict_settings_add_locale_option_name">"Jazyk:"</string>
     <string name="user_dict_settings_add_word_hint">"Napište slovo"</string>
@@ -94,10 +92,8 @@
     <string name="user_dict_settings_edit_dialog_title">"Upravit slovo"</string>
     <string name="user_dict_settings_all_languages">"Pro všechny jazyky"</string>
     <string name="user_dict_settings_more_languages">"Další jazyky…"</string>
-    <string name="user_dict_fast_scroll_alphabet">" ABCČDEFGHChIJKLMNOPQRŘSŠTUVWXYZŽ"</string>
     <string name="settings_category_clipboard_history">Historie schránky</string>
     <string name="settings_category_correction">Opravy</string>
-    <string name="use_system_language_to_select_input_method_subtypes">"Použít systémové jazyky"</string>
     <string name="select_input_method">"Vybrat metodu zadávání"</string>
     <string name="settings_category_experimental">Experimentální</string>
     <string name="settings_category_miscellaneous">Různé</string>
@@ -199,7 +195,6 @@
     <string name="close_history" tools:keep="@string/close_history">Zavřít historii schránky</string>
     <string name="clipboard_toolbar_keys">Výběr kláves panelu nástrojů schránky</string>
     <string name="prefs_bottom_padding_scale">Měřítko dolního odsazení</string>
-    <string name="button_copy_existing_layout">Zkopírovat stávající rozložení</string>
     <string name="message_add_custom_layout">Vybrat soubor v kompatibilním formátu. Informace o formátech jsou k dispozici %s.</string>
     <string name="layout_symbols" tools:keep="@string/layout_symbols">Symboly</string>
     <string name="layout_symbols_arabic" tools:keep="@string/layout_symbols_arabic">Symboly (arabské)</string>
@@ -227,11 +222,9 @@
     <string name="dictionary_link_text">zde</string>
     <string name="add_dictionary">Vybrat slovník, který chcete přidat. Slovníky ve formátu .dict lze stáhnout %s.</string>
     <string name="available_dictionary_experimental">%s (experimentální)</string>
-    <string name="dictionary_file_wrong_locale">Vybraný soubor je pro %1$s, ale byl očekáván soubor %2$s. Přesto jej použít pro %2$s?</string>
     <string name="dictionary_file_error">Chyba: Vybraný soubor není platný soubor slovníku</string>
     <string name="dictionary_file_wrong_script">Chyba: skript není kompatibilní s touto klávesnicí</string>
     <string name="dictionary_load_error">Chyba při načítání souboru slovníku</string>
-    <string name="dictionary_file_wrong_locale_ok">Přesto použít</string>
     <string name="user_dict_settings_add_weight_value">Váha:</string>
     <string name="theme_style">Styl</string>
     <string name="style_name_Rounded" tools:keep="@string/style_name_Rounded">Zaoblený</string>
@@ -298,10 +291,8 @@
     <string name="dialog_close">Zavřít</string>
     <string name="text_tap_languages">Klepnutím na jazyk otevřete nastavení</string>
     <string name="subtype_probhat_bn_BD">%s (Probhat)</string>
-    <string name="select_user_colors_summary">Výběr barev pro text a pozadí</string>
     <string name="theme_name_violette" tools:keep="@string/theme_name_violette">Fialový</string>
     <string name="theme_name_user" tools:keep="@string/theme_name_user">Uživatelsky definovaný</string>
-    <string name="theme_name_user_night" tools:keep="@string/theme_name_user_night">Uživatelsky definovaný (noční)</string>
     <string name="auto_user_color">Vybrat barvu automaticky</string>
     <string name="main_colors">Zobrazit pouze hlavní barvy</string>
     <string name="all_colors">Zobrazit všechny barvy</string>
@@ -309,7 +300,6 @@
     <string name="language_switch_key_behavior">Chování klávesy pro přepínání jazyků</string>
     <string name="vibrate_in_dnd_mode">Vibrace v režimu nerušit</string>
     <string name="settings_category_space">Mezerník</string>
-    <string name="split_spacer_scale_landscape">Vzdálenost rozdělení (na šířku)</string>
     <string name="enable_split_keyboard_landscape">Povolit rozdělenou klávesnici (na šířku)</string>
     <string name="prefs_always_show_suggestions_except_web_text_summary">Webová pole pro úpravu (nacházejí se převážně v prohlížečích) jsou velmi častou příčinou problémů s nastavením zobrazování návrhů</string>
     <string name="prefs_always_show_suggestions_except_web_text">Nezobrazovat návrhy pro webová pole pro úpravu</string>
@@ -404,10 +394,8 @@
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Funkční klávesy (další znaky)</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Enter</string>
     <string name="icon_style">Styl ikon</string>
-    <string name="prefs_bottom_padding_scale_landscape">Měřítko dolního odsazení (na šířku)</string>
     <string name="prefs_font_scale">Měřítko písma klávesnice</string>
     <string name="prefs_emoji_font_scale">Měřítko písma v zobrazení emodži</string>
-    <string name="prefs_side_padding_scale_landscape">Měřítko postranního odsazení (na šířku)</string>
     <string name="prefs_side_padding_scale">Měřítko postranního odsazení</string>
     <string name="label_bin" tools:keep="@string/label_bin">Koš</string>
     <string name="key_code">Kód klávesy</string>
@@ -454,4 +442,6 @@
     <string name="subtype_mhr">Mari (východní)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Spodní řádek emodži s akční klávesou</string>
     <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Spodní řádek schránky s akční klávesou</string>
+    <string name="number_row_in_symbols">Zobrazit číselný řádek na obrazovce znaků</string>
+    <string name="custom_emoji_font">Nastavit vlastní písmo emodži ze souboru</string>
 </resources>

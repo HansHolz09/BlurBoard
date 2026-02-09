@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +41,7 @@ import helium314.keyboard.settings.screens.getUserAndInternalDictionaries
 import java.io.File
 import java.util.Locale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 
 @Composable
 fun DictionaryDialog(
@@ -59,10 +58,9 @@ fun DictionaryDialog(
         onConfirmed = {},
         confirmButtonText = null,
         cancelButtonText = stringResource(R.string.dialog_close),
-        title = { Text(locale.localizedDisplayName(ctx.resources)) },
+        title = { Text(locale.localizedDisplayName(LocalResources.current)) },
         content = {
-            val state = rememberScrollState()
-            Column(Modifier.verticalScroll(state)) {
+            Column {
                 if (hasInternal) {
                     val color = if (mainDict == null) MaterialTheme.typography.titleSmall.color
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // for disabled look
@@ -96,6 +94,7 @@ fun DictionaryDialog(
                 }
             }
         },
+        scrollContent = true,
         neutralButtonText = stringResource(R.string.add_new_dictionary_title),
         onNeutral = {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)

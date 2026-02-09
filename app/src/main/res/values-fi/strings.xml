@@ -81,11 +81,9 @@
     <string name="show_setup_wizard_icon_summary">Näytä sovelluskuvake käynnistysohjelmassa</string>
     <string name="dictionary_category_title">"Sanakirjalisäosat"</string>
     <string name="dictionary_available">"Sanakirja saatavilla"</string>
-    <string name="last_update">"Päivitetty viimeksi"</string>
     <string name="settings">"Asetukset"</string>
     <string name="delete">"Poista"</string>
     <string name="version_text">"Versio %1$s"</string>
-    <string name="user_dict_settings_add_dialog_title">"Lisää sanakirjaan"</string>
     <string name="user_dict_settings_add_shortcut_option_name">"Pikanäppäin:"</string>
     <string name="user_dict_settings_add_locale_option_name">"Kieli:"</string>
     <string name="user_dict_settings_add_word_hint">"Kirjoita sana"</string>
@@ -93,8 +91,6 @@
     <string name="user_dict_settings_edit_dialog_title">"Muokkaa sanaa"</string>
     <string name="user_dict_settings_all_languages">"Kaikille kielille"</string>
     <string name="user_dict_settings_more_languages">"Lisää kieliä…"</string>
-    <string name="user_dict_fast_scroll_alphabet">" ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"</string>
-    <string name="use_system_language_to_select_input_method_subtypes">"Käytä järjestelmän kieliä"</string>
     <string name="select_input_method">"Valitse syöttötapa"</string>
     <string name="settings_screen_appearance">Ulkoasu</string>
     <string name="undo">"Kumoa"</string>
@@ -158,8 +154,6 @@
     <string name="enable_clipboard_history">Ota leikepöydän historia käyttöön</string>
     <string name="backup_restore_title">Varmuuskopioi ja palauta</string>
     <string name="backup_restore_message">Tallenna tai lataa tiedosto. Varoitus: palauttaminen ylikirjoittaa olemassa olevan datan</string>
-    <string name="button_copy_existing_layout">Kopioi olemassa oleva asettelu</string>
-    <string name="theme_name_user_night" tools:keep="@string/theme_name_user_night">Käyttäjän määrittämä (yö)</string>
     <string name="license">Avoimen lähdekoodin lisenssi</string>
     <string name="prefs_keyboard_height_scale">Näppäimistön korkeusskaalaus</string>
     <string name="prefs_narrow_key_gaps">Kapeat näppäinvälit</string>
@@ -208,7 +202,6 @@
     <string name="select_word" tools:keep="@string/select_word">Valitse sana</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Tyhjennä leikepöytä</string>
     <string name="day_or_night_night">Yö</string>
-    <string name="select_user_colors_summary">Valitse tekstin ja taustan värit</string>
     <string name="replace_dictionary">Korvaa sanakirja</string>
     <string name="theme_style">Tyyli</string>
     <string name="available_dictionary_experimental">%s (kokeellinen)</string>

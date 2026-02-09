@@ -22,6 +22,7 @@ import android.view.inputmethod.CorrectionInfo;
 import android.view.inputmethod.EditorInfo;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import helium314.keyboard.event.Event;
 import helium314.keyboard.event.InputTransaction;
@@ -57,9 +58,11 @@ import helium314.keyboard.latin.utils.DictionaryInfoUtils;
 import helium314.keyboard.latin.utils.InputTypeUtils;
 import helium314.keyboard.latin.utils.IntentUtils;
 import helium314.keyboard.latin.utils.Log;
+import helium314.keyboard.latin.utils.RecapitalizeMode;
 import helium314.keyboard.latin.utils.RecapitalizeStatus;
 import helium314.keyboard.latin.utils.ScriptUtils;
 import helium314.keyboard.latin.utils.StatsUtils;
+import helium314.keyboard.latin.utils.TextPlacement;
 import helium314.keyboard.latin.utils.TextRange;
 import helium314.keyboard.latin.utils.TimestampKt;
 
@@ -166,6 +169,7 @@ public final class InputLogic {
         cancelDoubleSpacePeriodCountdown();
         mInputLogicHandler.reset();
         mConnection.requestCursorUpdates(true, true);
+        setInlineEmojiSearchAction(false);
     }
 
     /**
@@ -802,14 +806,7 @@ public final class InputLogic {
                 break;
             case KeyCode.INLINE_EMOJI_SEARCH_DONE:
                 setInlineEmojiSearchAction(false);
-                if (mSuggestedWords.mWillAutoCorrect) {
-                    deleteTextReplacedByEmoji();
-                    commitCurrentAutoCorrection(inputTransaction.getSettingsValues(), LastComposedWord.NOT_A_SEPARATOR, handler);
-                    inputTransaction.setDidAutoCorrect();
-                    mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
-                } else {
-                    inputTransaction.setRequiresUpdateSuggestions();
-                }
+                inputTransaction.setRequiresUpdateSuggestions();
                 break;
             case KeyCode.VOICE_INPUT:
                 // switching to shortcut IME, shift state, keyboard,... is handled by LatinIME,
@@ -1101,6 +1098,16 @@ public final class InputLogic {
         final boolean shouldAvoidSendingCode = Constants.CODE_SPACE == codePoint
                 && !settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
                 && wasComposingWord;
+
+        // wrap / unwrap selected text in codepoint pairs
+        if (!wasComposingWord && mConnection.hasSelection()) { // we should never be composing when something is selected
+            final int pairedCodepoint = settingsValues.mSpacingAndPunctuations.getSecondInSymbolPair(codePoint);
+            if (pairedCodepoint != Constants.NOT_A_CODE) {
+                wrapSelection(codePoint, pairedCodepoint);
+                inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
+                return;
+            }
+        }
         if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
             // If we are in the middle of a recorrection, we need to commit the recorrection
             // first so that we can insert the separator at the current cursor position.
@@ -1261,6 +1268,7 @@ public final class InputLogic {
             } else {
                 mConnection.commitText("", 1);
             }
+            updateInlineEmojiSearch();
             inputTransaction.setRequiresUpdateSuggestions();
         } else {
             if (mLastComposedWord.canRevertCommit() && inputTransaction.getSettingsValues().mBackspaceRevertsAutocorrect) {
@@ -1610,7 +1618,7 @@ public final class InputLogic {
      * @param settingsValues The current settings values.
      */
     private void performRecapitalization(final SettingsValues settingsValues) {
-        if (!mConnection.hasSelection() || !mRecapitalizeStatus.mIsEnabled()) {
+        if (!mConnection.hasSelection() || !mRecapitalizeStatus.isEnabled()) {
             return; // No selection or recapitalize is disabled for now
         }
         final int selectionStart = mConnection.getExpectedSelectionStart();
@@ -1627,19 +1635,16 @@ public final class InputLogic {
             final CharSequence selectedText =
                     mConnection.getSelectedText(0 /* flags, 0 for no styles */);
             if (TextUtils.isEmpty(selectedText)) return; // Race condition with the input connection
-            mRecapitalizeStatus.start(selectionStart, selectionEnd, selectedText.toString(),
-                    settingsValues.mLocale,
+            mRecapitalizeStatus.start(selectedText.toString(), selectionStart, settingsValues.mLocale,
                     settingsValues.mSpacingAndPunctuations.mSortedWordSeparators);
-            // We trim leading and trailing whitespace.
-            mRecapitalizeStatus.trim();
         }
         mConnection.finishComposingText();
         mRecapitalizeStatus.rotate();
         mConnection.setSelection(selectionEnd, selectionEnd);
         mConnection.deleteTextBeforeCursor(numCharsSelected);
-        mConnection.commitText(mRecapitalizeStatus.getRecapitalizedString(), 0);
-        mConnection.setSelection(mRecapitalizeStatus.getNewCursorStart(),
-                mRecapitalizeStatus.getNewCursorEnd());
+        final TextPlacement replacement = mRecapitalizeStatus.textReplacement();
+        mConnection.commitText(replacement.text, 0);
+        mConnection.setSelection(replacement.selectionStart, replacement.selectionEnd());
     }
 
     private void performAdditionToUserHistoryDictionary(final SettingsValues settingsValues,
@@ -1773,7 +1778,6 @@ public final class InputLogic {
 
         updateInlineEmojiSearch();
         if (isInlineEmojiSearchAction()) {
-            mWordComposer.setComposingWord(EMPTY_CODE_POINTS, null);
             mInputLogicHandler.getSuggestedWords(() -> getSuggestedWords(SuggestedWords.INPUT_STYLE_TYPING,
                 SuggestedWords.NOT_A_SEQUENCE_NUMBER, this::doShowSuggestionsAndClearAutoCorrectionIndicator));
             return;
@@ -1907,8 +1911,7 @@ public final class InputLogic {
         final String stringToCommit = originallyTypedWord +
                 (usePhantomSpace ? "" : separatorString);
         final SpannableString textToCommit = new SpannableString(stringToCommit);
-        if (committedWord instanceof SpannableString) {
-            final SpannableString committedWordWithSuggestionSpans = (SpannableString)committedWord;
+        if (committedWord instanceof SpannableString committedWordWithSuggestionSpans) {
             final Object[] spans = committedWordWithSuggestionSpans.getSpans(0,
                     committedWord.length(), Object.class);
             final int lastCharIndex = textToCommit.length() - 1;
@@ -2002,12 +2005,13 @@ public final class InputLogic {
                 SpaceState.PHANTOM == mSpaceState);
     }
 
-    public int getCurrentRecapitalizeState() {
+    @Nullable
+    public RecapitalizeMode getCurrentRecapitalizeState() {
         if (!mRecapitalizeStatus.isStarted()
                 || !mRecapitalizeStatus.isSetAt(mConnection.getExpectedSelectionStart(),
                         mConnection.getExpectedSelectionEnd())) {
             // Not recapitalizing at the moment
-            return RecapitalizeStatus.NOT_A_RECAPITALIZE_MODE;
+            return null;
         }
         return mRecapitalizeStatus.getCurrentMode();
     }
@@ -2350,8 +2354,7 @@ public final class InputLogic {
         }
         final SuggestedWordInfo autoCorrectionOrNull = mWordComposer.getAutoCorrectionOrNull();
         final String typedWord = mWordComposer.getTypedWord();
-        final String stringToCommit = (autoCorrectionOrNull != null)
-                ? autoCorrectionOrNull.mWord : typedWord;
+        final String stringToCommit = (autoCorrectionOrNull != null) ? autoCorrectionOrNull.mWord : typedWord;
         if (stringToCommit != null) {
             final boolean isBatchMode = mWordComposer.isBatchMode();
             commitChosenWord(settingsValues, stringToCommit, LastComposedWord.COMMIT_TYPE_DECIDED_WORD, separator);
@@ -2365,7 +2368,7 @@ public final class InputLogic {
                 mConnection.commitCorrection(new CorrectionInfo(
                         mConnection.getExpectedSelectionEnd() - stringToCommit.length(),
                         typedWord, stringToCommit));
-                String prevWordsContext = (autoCorrectionOrNull != null)
+                final String prevWordsContext = (autoCorrectionOrNull != null)
                         ? autoCorrectionOrNull.mPrevWordsContext
                         : "";
                 StatsUtils.onAutoCorrection(typedWord, stringToCommit, isBatchMode,
@@ -2439,6 +2442,25 @@ public final class InputLogic {
             Log.d(TAG, "commitChosenWord() : " + runTimeMillis + " ms to run "
                     + "WordComposer.commitWord()");
         }
+    }
+
+    /**
+     *  Wraps the selected text into the codepoints. If the same codepoints are
+     *  already present before and after the selection, they are removed instead.
+     *  (unfortunately Android long-press selection may select one of those codepoints, so unwrap may not work well)
+     */
+    private void wrapSelection(final int start, final int end) {
+        final CharSequence selected = mConnection.getSelectedText(0);
+        if (mConnection.getCodePointBeforeCursor() == start) {
+            // maybe we want to revert it
+            final CharSequence afterCursor = mConnection.getTextAfterCursor(1, 0);
+            if (afterCursor.length() > 0 && afterCursor.charAt(0) == end) {
+                mConnection.setSelection(mConnection.getExpectedSelectionStart() - 1, mConnection.getExpectedSelectionEnd() + 1);
+                mConnection.commitText(selected, 1);
+                return;
+            }
+        }
+        mConnection.commitText(StringUtils.newSingleCodePointString(start) + selected + StringUtils.newSingleCodePointString(end), 1);
     }
 
     /**
@@ -2620,8 +2642,7 @@ public final class InputLogic {
         if (on != isInlineEmojiSearchAction()) {
             KeyboardSwitcher.getInstance().loadKeyboard(mLatinIME.getCurrentInputEditorInfo(), Settings.getValues(),
                             mLatinIME.getCurrentAutoCapsState(), mLatinIME.getCurrentRecapitalizeState(),
-                            on? new KeyboardLayoutSet.InternalAction(
-                                KeyCode.INLINE_EMOJI_SEARCH_DONE, Settings.getValues().mAutoCorrectEnabled? "\uD83D\uDC4D" : "⏹️") : null);
+                            on? new KeyboardLayoutSet.InternalAction(KeyCode.INLINE_EMOJI_SEARCH_DONE,"!icon/close_history") : null);
         }
     }
 
@@ -2655,13 +2676,18 @@ public final class InputLogic {
             }
         }
         callback.onGetSuggestedWords(new SuggestedWords(suggestedWordInfos, suggestions.mRawSuggestions, typedWordInfo,
-                                     false /* typedWordValid */, Settings.getValues().mAutoCorrectEnabled,
+                                     false /* typedWordValid */, false /* autoCorrectEnabled */,
                                      false /* isObsoleteSuggestions */, SuggestedWords.INPUT_STYLE_TYPING, sequenceNumber));
     }
 
     private void deleteTextReplacedByEmoji() {
         mConnection.finishComposingText();
-        mConnection.deleteTextBeforeCursor(getInlineEmojiSearchString().length() + 1);
+        var inlineEmojiSearchString = getInlineEmojiSearchString();
+        if (inlineEmojiSearchString != null) {
+            mConnection.deleteTextBeforeCursor(inlineEmojiSearchString.length() + 1);
+        } else {
+            Log.e("inlineEmojiSearch", "Inconsistent state - inlineEmojiSearchString is null");
+        }
     }
 
     private String getInlineEmojiSearchString() {
@@ -2672,7 +2698,15 @@ public final class InputLogic {
         return getInlineEmojiSearchString(mConnection.getTextBeforeCursor(50, 0));
     }
 
-    // public for testing
+    /**
+     * Gets the inline emoji search string. Rules:
+     * - string starts with last colon before the cursor
+     * - the character before the colon has to be non-word, non-digit
+     * - the character after the colon has to be non-space
+     * - the string cannot contain newlines
+     * <p>
+     * Public for testing.
+     */
     public static String getInlineEmojiSearchString(CharSequence textBeforeCursor) {
         if (textBeforeCursor == null) {
             return null;
@@ -2689,6 +2723,10 @@ public final class InputLogic {
         }
 
         if (Character.isWhitespace(text.codePointAt(markerIndex + 1))) {
+            return null;
+        }
+
+        if (text.indexOf('\n', markerIndex + 2) >= 0) {
             return null;
         }
 

@@ -22,6 +22,7 @@ import helium314.keyboard.latin.utils.withHtmlLink
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.dialogs.InfoDialog
+import androidx.core.content.edit
 
 @Composable
 fun SwitchPreference(
@@ -62,7 +63,7 @@ fun SwitchPreference(
             return
         }
         value = newValue
-        prefs.edit().putBoolean(key, newValue).apply()
+        prefs.edit { putBoolean(key, newValue) }
         onCheckedChange(newValue)
     }
     Preference(
@@ -82,7 +83,8 @@ fun SwitchPreference(
 fun SwitchPreferenceWithEmojiDictWarning(setting: Setting, default: Boolean) {
     val context = LocalContext.current
     var showWarningDialog by rememberSaveable { mutableStateOf(false) }
-    SwitchPreference(setting, default) { showWarningDialog = it && DictionaryInfoUtils.getLocalesWithEmojiDicts(context).isEmpty() }
+    val hasEmojiDict = DictionaryInfoUtils.getLocalesWithEmojiDicts(context).isNotEmpty()
+    SwitchPreference(setting, default && hasEmojiDict) { showWarningDialog = it && !hasEmojiDict }
     if (showWarningDialog) {
         // emoji_dictionary_required contains "%s" since we didn't supply a formatArg
         val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL + Links.DICTIONARY_DOWNLOAD_SUFFIX.replace("raw", "src")

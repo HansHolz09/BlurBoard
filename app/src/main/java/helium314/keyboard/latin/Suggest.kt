@@ -155,9 +155,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         firstOccurrenceOfTypedWordInSuggestions: Int,
         typedWordInfo: SuggestedWordInfo?
     ): Pair<Boolean, Boolean> {
-        val consideredWord = if (trailingSingleQuotesCount > 0)
-                typedWordString.substring(0, typedWordString.length - trailingSingleQuotesCount)
-            else typedWordString
+        val consideredWord = typedWordString.dropLast(trailingSingleQuotesCount)
         val firstAndTypedEmptyInfos by lazy { getEmptyWordSuggestions() }
 
         val scoreLimit = Settings.getValues().mScoreLimitForAutocorrect
@@ -166,7 +164,13 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         val allowsToBeAutoCorrected: Boolean
         if (SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION
                 || firstSuggestionInContainer?.isKindOf(SuggestedWordInfo.KIND_WHITELIST) == true
-                || (consideredWord.length > 1 && typedWordInfo?.mSourceDict == null) // more than 1 letter and not in dictionary
+                || (consideredWord.length > 1
+                    && typedWordInfo?.mSourceDict == null // more than 1 letter and not in dictionary
+                    // if the typed word contains @ or ., the suggestion also needs to contain it
+                    // (avoid autocorrecting mail addresses, URLs & similar to something different)
+                    && (!typedWordString.contains('@') || firstSuggestionInContainer?.mWord?.contains('@') == true)
+                    && (!typedWordString.contains('.') || firstSuggestionInContainer?.mWord?.contains('.') == true)
+                    )
             ) {
             allowsToBeAutoCorrected = true
         } else if (firstSuggestionInContainer != null && typedWordString.isNotEmpty()) {
@@ -335,68 +339,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             false, false, inputStyle, sequenceNumber)
     }
 
-    private fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
-        for (i in 0..1) {
-            if (words.size > 2 && words[i].isEmoji) {
-                val relativeIndex = words.subList(2, words.size).indexOfFirst { !it.isEmoji }
-                if (relativeIndex < 0) break
-                val firstNonEmojiIndex = relativeIndex + 2
-                if (firstNonEmojiIndex > i) {
-                    words.add(i, words.removeAt(firstNonEmojiIndex))
-                }
-            }
-        }
-    }
-
-    /** reduces score of the first suggestion if next one is close and has more than a single letter  */
-    private fun replaceSingleLetterFirstSuggestion(suggestionResults: SuggestionResults) {
-        if (suggestionResults.size < 2 || suggestionResults.first().mWord.length != 1) return
-        // suppress single letter suggestions if next suggestion is close and has more than one letter
-        val iterator: Iterator<SuggestedWordInfo> = suggestionResults.iterator()
-        val first = iterator.next()
-        val second = iterator.next()
-        if (second.mWord.length > 1 && second.mScore > 0.94 * first.mScore) {
-            suggestionResults.remove(first) // remove and re-add with lower score
-            suggestionResults.add(
-                SuggestedWordInfo(
-                    first.mWord, first.mPrevWordsContext, (first.mScore * 0.93).toInt(),
-                    first.mKindAndFlags, first.mSourceDict, first.mIndexOfTouchPointOfSecondWord, first.mAutoCommitFirstWordConfidence
-                )
-            )
-            if (DebugFlags.DEBUG_ENABLED)
-                Log.d(TAG, "reduced score of ${first.mWord} from ${first.mScore}, new first: ${suggestionResults.first().mWord} (${suggestionResults.first().mScore})")
-        }
-    }
-
-    // returns new pseudoTypedWordInfo, puts it in suggestionsContainer, modifies nextWordSuggestions
-    private fun preferNextWordSuggestion(
-        pseudoTypedWordInfo: SuggestedWordInfo?,
-        suggestionsContainer: ArrayList<SuggestedWordInfo>,
-        nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
-    ): SuggestedWordInfo? {
-        if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
-            || pseudoTypedWordInfo.mSourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
-        ) return pseudoTypedWordInfo
-        nextWordSuggestions.removeAll { info: SuggestedWordInfo -> info.mScore < 170 } // we only want reasonably often typed words, value may require tuning
-        if (nextWordSuggestions.isEmpty()) return pseudoTypedWordInfo
-
-        // for each suggestion, check whether the word was already typed in this ngram context (i.e. is nextWordSuggestion)
-        for (suggestion in suggestionsContainer) {
-            if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.93) break // we only want reasonably good suggestions, value may require tuning
-            if (suggestion === rejected) continue  // ignore rejected suggestions
-            for (nextWordSuggestion in nextWordSuggestions) {
-                if (nextWordSuggestion.mWord != suggestion.mWord) continue
-                // if we have a high scoring suggestion in next word suggestions, take it (because it's expected that user might want to type it again)
-                suggestionsContainer.remove(suggestion)
-                suggestionsContainer.add(0, suggestion)
-                if (DebugFlags.DEBUG_ENABLED)
-                    Log.d(TAG, "replaced batch word $pseudoTypedWordInfo with $suggestion")
-                return suggestion
-            }
-        }
-        return pseudoTypedWordInfo
-    }
-
     /** get suggestions based on the current ngram context, with an empty typed word (that's what next word suggestions do)  */
     private fun getNextWordSuggestions(ngramContext: NgramContext, keyboard: Keyboard, inputStyle: Int,
                                        settingsValuesForSuggestion: SettingsValuesForSuggestion): SuggestionResults {
@@ -462,7 +404,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
 
         @JvmStatic
-        public fun addDebugInfo(wordInfo: SuggestedWordInfo?, typedWord: String) {
+        fun addDebugInfo(wordInfo: SuggestedWordInfo?, typedWord: String) {
             if (!SuggestionStripView.DEBUG_SUGGESTIONS)
                 return
             val normalizedScore = BinaryDictionaryUtils.calcNormalizedScore(typedWord, wordInfo.toString(), wordInfo!!.mScore)
@@ -534,5 +476,67 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             } else {
                 word
             }
+
+        private fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
+            for (i in 0..1) {
+                if (words.size > 2 && words[i].isEmoji) {
+                    val relativeIndex = words.subList(2, words.size).indexOfFirst { !it.isEmoji }
+                    if (relativeIndex < 0) break
+                    val firstNonEmojiIndex = relativeIndex + 2
+                    if (firstNonEmojiIndex > i) {
+                        words.add(i, words.removeAt(firstNonEmojiIndex))
+                    }
+                }
+            }
+        }
+
+        /** reduces score of the first suggestion if next one is close and has more than a single letter  */
+        private fun replaceSingleLetterFirstSuggestion(suggestionResults: SuggestionResults) {
+            if (suggestionResults.size < 2 || suggestionResults.first().mWord.length != 1) return
+            // suppress single letter suggestions if next suggestion is close and has more than one letter
+            val iterator: Iterator<SuggestedWordInfo> = suggestionResults.iterator()
+            val first = iterator.next()
+            val second = iterator.next()
+            if (second.mWord.length > 1 && second.mScore > 0.94 * first.mScore) {
+                suggestionResults.remove(first) // remove and re-add with lower score
+                suggestionResults.add(
+                    SuggestedWordInfo(
+                        first.mWord, first.mPrevWordsContext, (first.mScore * 0.93).toInt(),
+                        first.mKindAndFlags, first.mSourceDict, first.mIndexOfTouchPointOfSecondWord, first.mAutoCommitFirstWordConfidence
+                    )
+                )
+                if (DebugFlags.DEBUG_ENABLED)
+                    Log.d(TAG, "reduced score of ${first.mWord} from ${first.mScore}, new first: ${suggestionResults.first().mWord} (${suggestionResults.first().mScore})")
+            }
+        }
+
+        /** returns new pseudoTypedWordInfo, puts it in suggestionsContainer, modifies nextWordSuggestions */
+        private fun preferNextWordSuggestion(
+            pseudoTypedWordInfo: SuggestedWordInfo?,
+            suggestionsContainer: ArrayList<SuggestedWordInfo>,
+            nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
+        ): SuggestedWordInfo? {
+            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
+                || pseudoTypedWordInfo.mSourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
+            ) return pseudoTypedWordInfo
+            nextWordSuggestions.removeAll { info: SuggestedWordInfo -> info.mScore < 170 } // we only want reasonably often typed words, value may require tuning
+            if (nextWordSuggestions.isEmpty()) return pseudoTypedWordInfo
+
+            // for each suggestion, check whether the word was already typed in this ngram context (i.e. is nextWordSuggestion)
+            for (suggestion in suggestionsContainer) {
+                if (suggestion.mScore < pseudoTypedWordInfo.mScore * 0.93) break // we only want reasonably good suggestions, value may require tuning
+                if (suggestion === rejected) continue  // ignore rejected suggestions
+                for (nextWordSuggestion in nextWordSuggestions) {
+                    if (nextWordSuggestion.mWord != suggestion.mWord) continue
+                    // if we have a high scoring suggestion in next word suggestions, take it (because it's expected that user might want to type it again)
+                    suggestionsContainer.remove(suggestion)
+                    suggestionsContainer.add(0, suggestion)
+                    if (DebugFlags.DEBUG_ENABLED)
+                        Log.d(TAG, "replaced batch word $pseudoTypedWordInfo with $suggestion")
+                    return suggestion
+                }
+            }
+            return pseudoTypedWordInfo
+        }
     }
 }

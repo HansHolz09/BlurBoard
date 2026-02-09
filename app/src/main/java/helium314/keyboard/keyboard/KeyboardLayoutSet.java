@@ -83,10 +83,10 @@ public final class KeyboardLayoutSet {
         boolean mDisableTouchPositionCorrectionDataForTest; // remove
         // TODO: Use {@link InputAttributes} instead of these variables.
         EditorInfo mEditorInfo;
-        boolean mIsPasswordField;
         boolean mVoiceInputKeyEnabled;
         boolean mDeviceLocked;
         boolean mNumberRowEnabled;
+        boolean mNumberRowInSymbols;
         boolean mLanguageSwitchKeyEnabled;
         boolean mEmojiKeyEnabled;
         boolean mOneHandedModeEnabled;
@@ -213,7 +213,6 @@ public final class KeyboardLayoutSet {
             params.mMode = getKeyboardMode(editorInfo);
             // TODO: Consolidate those with {@link InputAttributes}.
             params.mEditorInfo = editorInfo;
-            params.mIsPasswordField = InputTypeUtils.isPasswordInputType(editorInfo.inputType);
 
             // When the device is still locked, features like showing the IME setting app need to be locked down.
             params.mDeviceLocked = IsLockedCompatKt.isDeviceLocked(context);
@@ -257,6 +256,11 @@ public final class KeyboardLayoutSet {
 
         public Builder setNumberRowEnabled(final boolean enabled) {
             mParams.mNumberRowEnabled = enabled;
+            return this;
+        }
+
+        public Builder setNumberRowInSymbolsEnabled(final boolean enabled) {
+            mParams.mNumberRowInSymbols = enabled;
             return this;
         }
 

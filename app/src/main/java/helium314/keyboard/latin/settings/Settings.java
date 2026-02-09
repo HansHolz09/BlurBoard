@@ -6,6 +6,7 @@
 
 package helium314.keyboard.latin.settings;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
@@ -135,6 +136,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ONE_HANDED_SCALE_PREFIX = "one_handed_mode_scale";
 
     public static final String PREF_SHOW_NUMBER_ROW = "show_number_row";
+    public static final String PREF_SHOW_NUMBER_ROW_IN_SYMBOLS = "show_number_row_in_symbols";
     public static final String PREF_LOCALIZED_NUMBER_ROW = "localized_number_row";
     public static final String PREF_SHOW_NUMBER_ROW_HINTS = "show_number_row_hints";
     public static final String PREF_CUSTOM_CURRENCY_KEY = "custom_currency_key";
@@ -196,6 +198,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     private final static Drawable[] sCachedBackgroundImages = new Drawable[4];
     private static Typeface sCachedTypeface;
     private static boolean sCustomTypefaceLoaded; // to avoid repeatedly checking custom typeface file when there is no custom typeface
+    private static Typeface sCachedEmojiTypeface;
+    private static boolean sCustomEmojiTypefaceLoaded;
 
     private static final Settings sInstance = new Settings();
 
@@ -214,6 +218,10 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public static SettingsValues getValues() {
         return sInstance.mSettingsValues;
+    }
+
+    public static Context getCurrentContext() {
+        return sInstance.mContext;
     }
 
     public static void init(final Context context) {
@@ -494,6 +502,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         return mContext.getResources().getInteger(R.integer.config_screen_metrics) >= 3;
     }
 
+    @SuppressLint("DiscouragedApi")
     public int getStringResIdByName(final String name) {
         return mContext.getResources().getIdentifier(name, "string", mContext.getPackageName());
     }
@@ -516,6 +525,10 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public static File getCustomFontFile(final Context context) {
         return new File(DeviceProtectedUtils.getFilesDir(context), "custom_font");
+    }
+
+    public static File getCustomEmojiFontFile(final Context context) {
+        return new File(DeviceProtectedUtils.getFilesDir(context), "custom_emoji_font");
     }
 
     // "default" layout as in this is used if nothing else is specified in the subtype
@@ -554,14 +567,27 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         if (!sCustomTypefaceLoaded) {
             try {
                 sCachedTypeface = Typeface.createFromFile(getCustomFontFile(mContext));
-            } catch (Exception e) { }
+            } catch (Exception ignored) { }
         }
         sCustomTypefaceLoaded = true;
         return sCachedTypeface;
     }
 
+    @Nullable
+    public Typeface getCustomEmojiTypeface() {
+        if (!sCustomEmojiTypefaceLoaded) {
+            try {
+                sCachedEmojiTypeface = Typeface.createFromFile(getCustomEmojiFontFile(mContext));
+            } catch (Exception ignored) { }
+        }
+        sCustomEmojiTypefaceLoaded = true;
+        return sCachedEmojiTypeface;
+    }
+
     public static void clearCachedTypeface() {
         sCachedTypeface = null;
         sCustomTypefaceLoaded = false;
+        sCachedEmojiTypeface = null;
+        sCustomEmojiTypefaceLoaded = false;
     }
 }
