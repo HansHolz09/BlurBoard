@@ -1732,6 +1732,10 @@ public class LatinIME extends InputMethodService implements
         mOriginalNavBarColor = window.getNavigationBarColor();
         window.setNavigationBarColor(color);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.setBackgroundBlurRadius(50);
+        }
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             return;
         final View view = window.getDecorView();
