@@ -1,6 +1,6 @@
 <div align="center">
-  <h1>BlurBoard</h1>
   <img width="80" src="art/launcher_icon/blurboard_icon_round.png">
+  <h1>BlurBoard</h1>
 </div>
 
 A fork of HeliBoard that uses the Android [Window Blur API](https://source.android.com/docs/core/display/window-blurs) for a blurred keyboard background. In addition, I have made my own adjustments to the defaults, which make the keyboard look a little more like Gboard by default. 
