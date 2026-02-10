@@ -979,6 +979,7 @@ public class LatinIME extends InputMethodService implements
         super.onWindowShown();
         if (isInputViewShown()) {
             setNavigationBarColor();
+            setBackgroundBlur();
             workaroundForHuaweiStatusBarIssue();
         }
     }
@@ -1732,10 +1733,6 @@ public class LatinIME extends InputMethodService implements
         mOriginalNavBarColor = window.getNavigationBarColor();
         window.setNavigationBarColor(color);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(50);
-        }
-
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             return;
         final View view = window.getDecorView();
@@ -1744,6 +1741,25 @@ public class LatinIME extends InputMethodService implements
             view.setSystemUiVisibility(mOriginalNavBarFlags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         } else {
             view.setSystemUiVisibility(mOriginalNavBarFlags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        }
+    }
+
+    private Boolean lastKnownBlurState = null;
+    private void setBackgroundBlur() {
+        final Window window = getWindow().getWindow();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && window != null) {
+            window.setBackgroundBlurRadius(50);
+            window.getWindowManager().addCrossWindowBlurEnabledListener(enabled -> {
+                if (lastKnownBlurState == null) {
+                    lastKnownBlurState = enabled;
+                    return;
+                }
+                if (enabled != lastKnownBlurState) {
+                    lastKnownBlurState = enabled;
+                    KeyboardSwitcher.getInstance().setThemeNeedsReloadWithoutReload();
+                    requestHideSelf(0);
+                }
+            });
         }
     }
 

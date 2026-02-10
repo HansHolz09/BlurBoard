@@ -19,9 +19,6 @@ import helium314.keyboard.latin.utils.defaultToolbarPref
 object Defaults {
     fun initDynamicDefaults(context: Context) {
         PREF_GESTURE_DYNAMIC_PREVIEW_FOLLOW_SYSTEM = getTransitionAnimationScale(context) != 0.0f
-        val dm = context.resources.displayMetrics
-        val px600 = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 600f, dm)
-        PREF_POPUP_ON = dm.widthPixels >= px600 || dm.heightPixels >= px600
     }
 
     // must correspond to a file name
@@ -41,24 +38,24 @@ object Defaults {
     }
 
     private const val DEFAULT_SIZE_SCALE = 1.0f // 100%
-    const val PREF_THEME_STYLE = KeyboardTheme.STYLE_MATERIAL
-    const val PREF_ICON_STYLE = KeyboardTheme.STYLE_MATERIAL
-    const val PREF_THEME_COLORS = KeyboardTheme.THEME_LIGHT
-    const val PREF_THEME_COLORS_NIGHT = KeyboardTheme.THEME_DARK
-    const val PREF_THEME_KEY_BORDERS = false
+    const val PREF_THEME_STYLE = KeyboardTheme.STYLE_ROUNDED
+    const val PREF_ICON_STYLE = KeyboardTheme.STYLE_ROUNDED
+    const val PREF_THEME_COLORS = KeyboardTheme.THEME_DYNAMIC
+    const val PREF_THEME_COLORS_NIGHT = KeyboardTheme.THEME_DYNAMIC
+    const val PREF_THEME_KEY_BORDERS = true
     @JvmField
     val PREF_THEME_DAY_NIGHT = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     const val PREF_CUSTOM_ICON_NAMES = ""
     const val PREF_TOOLBAR_CUSTOM_KEY_CODES = ""
     const val PREF_AUTO_CAP = true
-    const val PREF_VIBRATE_ON = false
+    const val PREF_VIBRATE_ON = true
     const val PREF_VIBRATE_IN_DND_MODE = false
     const val PREF_SOUND_ON = false
     const val PREF_SUGGEST_EMOJIS = true
     const val PREF_INLINE_EMOJI_SEARCH = true
     const val PREF_SHOW_EMOJI_DESCRIPTIONS = true
     @JvmField
-    var PREF_POPUP_ON = true
+    var PREF_POPUP_ON = false
     const val PREF_AUTO_CORRECTION = true
     const val PREF_MORE_AUTO_CORRECTION = false
     const val PREF_AUTO_CORRECT_THRESHOLD = 0.185f
@@ -73,13 +70,13 @@ object Defaults {
     const val PREF_BLOCK_POTENTIALLY_OFFENSIVE = true
     const val PREF_SHOW_LANGUAGE_SWITCH_KEY = false
     const val PREF_LANGUAGE_SWITCH_KEY = "internal"
-    const val PREF_SHOW_EMOJI_KEY = false
+    const val PREF_SHOW_EMOJI_KEY = true
     const val PREF_VARIABLE_TOOLBAR_DIRECTION = true
     const val PREF_ADDITIONAL_SUBTYPES = "de${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty${Separators.SETS}" +
             "fr${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwertz${Separators.SETS}" +
             "hu${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty"
     const val PREF_ENABLE_SPLIT_KEYBOARD = false
-    const val PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = false
+    const val PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE = true
     @JvmField
     val PREF_SPLIT_SPACER_SCALE = Array(2) { DEFAULT_SIZE_SCALE }
     @JvmField
@@ -89,7 +86,7 @@ object Defaults {
     @JvmField
     val PREF_SIDE_PADDING_SCALE = Array(4) { 0f }
     const val PREF_FONT_SCALE = DEFAULT_SIZE_SCALE
-    const val PREF_EMOJI_FONT_SCALE = DEFAULT_SIZE_SCALE
+    const val PREF_EMOJI_FONT_SCALE = 0.8f
     const val PREF_EMOJI_KEY_FIT = true
     const val PREF_EMOJI_SKIN_TONE = ""
     const val PREF_SPACE_HORIZONTAL_SWIPE = "move_cursor"
@@ -110,8 +107,8 @@ object Defaults {
     const val PREF_KEY_LONGPRESS_TIMEOUT = 300
     const val PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY = true
     const val PREF_GESTURE_PREVIEW_TRAIL = true
-    const val PREF_GESTURE_FLOATING_PREVIEW_TEXT = true
-    const val PREF_GESTURE_FLOATING_PREVIEW_DYNAMIC = true
+    const val PREF_GESTURE_FLOATING_PREVIEW_TEXT = false
+    const val PREF_GESTURE_FLOATING_PREVIEW_DYNAMIC = false
     @JvmField
     var PREF_GESTURE_DYNAMIC_PREVIEW_FOLLOW_SYSTEM = true
     const val PREF_GESTURE_SPACE_AWARE = false
@@ -139,12 +136,12 @@ object Defaults {
     const val PREF_SPACE_TO_CHANGE_LANG = true
     const val PREF_LANGUAGE_SWIPE_DISTANCE = 5
     const val PREF_ENABLE_CLIPBOARD_HISTORY = true
-    const val PREF_CLIPBOARD_HISTORY_RETENTION_TIME = 10 // minutes
+    const val PREF_CLIPBOARD_HISTORY_RETENTION_TIME = 120 // minutes
     const val PREF_CLIPBOARD_HISTORY_PINNED_FIRST = true
     const val PREF_ADD_TO_PERSONAL_DICTIONARY = false
     @JvmField
     val PREF_NAVBAR_COLOR = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-    const val PREF_NARROW_KEY_GAPS = false
+    const val PREF_NARROW_KEY_GAPS = true
     const val PREF_ENABLED_SUBTYPES = ""
     const val PREF_SELECTED_SUBTYPE = ""
     const val PREF_URL_DETECTION = false

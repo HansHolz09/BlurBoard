@@ -13,6 +13,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageView
 import androidx.annotation.ColorInt
 import androidx.annotation.RequiresApi
@@ -87,12 +88,14 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
 
     private val isNight = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
 
+    private val blurAlpha = if ((context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).isCrossWindowBlurEnabled) 150 else 255
+
     private val accent = getAccent(context)
     private val gesture = getGesture(context)
-    private val background = ColorUtils.setAlphaComponent(getBackground(context), 150)
-    private val keyBackground = ColorUtils.setAlphaComponent(getKeyBackground(context), 150)
-    private val functionalKey = ColorUtils.setAlphaComponent(getFunctionalKey(context), 150)
-    private val spaceBar = ColorUtils.setAlphaComponent(getKeyBackground(context), 150)
+    private val background = ColorUtils.setAlphaComponent(getBackground(context), blurAlpha)
+    private val keyBackground = getKeyBackground(context)
+    private val functionalKey = getFunctionalKey(context)
+    private val spaceBar = getKeyBackground(context)
     private val keyText = getKeyText(context)
     private val keyHintText = getKeyHintText(context)
     private val spaceBarText = getSpaceBarText(context)
@@ -117,9 +120,9 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
     override fun haveColorsChanged(context: Context) =
         accent != getAccent(context)
                 || gesture != getGesture(context)
-                || background != ColorUtils.setAlphaComponent(getBackground(context), 150)
-                || keyBackground != ColorUtils.setAlphaComponent(getKeyBackground(context), 150)
-                || functionalKey != ColorUtils.setAlphaComponent(getFunctionalKey(context), 150)
+                || background != ColorUtils.setAlphaComponent(getBackground(context), blurAlpha)
+                || keyBackground != getKeyBackground(context)
+                || functionalKey != getFunctionalKey(context)
                 || keyText != getKeyText(context)
                 || keyHintText != getKeyHintText(context)
                 || spaceBarText != getSpaceBarText(context)
