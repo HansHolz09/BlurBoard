@@ -1,0 +1,11 @@
+* het verzamelen van achtergrondgebarengegevens toevoegen
+* bestand/afbeeldingsfunctionaliteit toevoegen aan de klembordgeschiedenis
+* zwevend toetsenbord toevoegen
+* Unicode 17.0 emoji's toevoegen
+* afzonderlijke schaalinstellingen toevoegen voor opvouwbare telefoons
+* touchpad-modus toevoegen op space slide
+* optie toevoegen om spellingcontrole suggestie popup uit te schakelen
+* verander het vertrouwen van de autocorrectie in een schuifregelaar
+* verander smalle sleutelopeningen in een schuifregelaar
+* mogelijke beveiligingsprobleem bij het herstellen van back-up uit gemanipuleerd zip-bestand oplossen
+* en meer oplossingen en verbeteringen...

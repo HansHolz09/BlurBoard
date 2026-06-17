@@ -14,6 +14,13 @@ object Links {
     const val WIKI_URL = "$ORIGIN_GITHUB/wiki"
     const val CUSTOM_LAYOUTS = "$ORIGIN_GITHUB/discussions/categories/custom-layout"
     const val CUSTOM_COLORS = "$ORIGIN_GITHUB/discussions/categories/custom-colors"
+    const val GESTURE_DATA_VIDEO_PEERTUBE = "https://makertube.net/w/cQECfDkuLGR9eUQquUEo4K"
+    const val GESTURE_DATA_VIDEO_YOUTUBE = "https://youtu.be/CyjumVTWtJA"
+    const val GESTURE_DATA_WIKI = "$WIKI_URL/Tutorial:-How-to-Contribute-Gesture-Data"
+    const val BACKGROUND_GESTURE_DATA_VIDEO_PEERTUBE = "https://makertube.net/w/pPywMiF7kjumFfMrQKHzoU"
+    const val BACKGROUND_GESTURE_DATA_VIDEO_YOUTUBE = "https://youtu.be/VJLzVEhY2PY"
+    const val BACKGROUND_GESTURE_DATA_WIKI = "$WIKI_URL/Background-Gesture-Data-Gathering"
+    const val SWIPE_O_SCOPE = "https://codeberg.org/eclexic/swipe-o-scope"
 }
 
 val combiningRange = 0x300..0x35b
